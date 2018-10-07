@@ -21,12 +21,28 @@ app.get('*', (req,res)=>{
 
 // Timer
 var countdown = 0;
+var safetyNet = 0;
+var isSafetyOn = true;
+
+
 var interval = setInterval(function(){
-   if(countdown < 0){
-    countdown = 10;
-   }
-   console.log(countdown);
-   io.emit('time',countdown);
+
+  if(safetyNet <= 0){
+    isSafetyOn = false;
+    if(countdown < 0){
+      // end stream, start up next stream
+      countdown = 10;
+      safetyNet = 10;
+      isSafetyOn = true;
+    }
+  }else{
+    safetyNet--;
+  }
+
+   console.log("countdown: " + countdown);
+   console.log("safetyNet: " + safetyNet);
+   console.log("isSafetyOn: " + isSafetyOn);
+   io.emit('time',{countdown,safetyNet,isSafetyOn});
    countdown--;
 }, 1000);
 
@@ -34,6 +50,17 @@ io.on('connection', socket => {
   console.log("on connection");
   socket.on('time', (req) => {
     console.log(req);
+  })
+  socket.on('add-time', req => {
+    console.log("add-time");
+    if(countdown >= 0){
+      countdown+=1;
+    }
+  })
+  socket.on('subtract-time', req=> {
+    if(countdown > 0 && !isSafetyOn){
+      countdown--;
+    }
   })
   socket.on('disconnect', () => {
     console.log("user disconnected");
